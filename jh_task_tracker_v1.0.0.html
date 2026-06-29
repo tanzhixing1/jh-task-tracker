@@ -2288,6 +2288,11 @@ let pomoCurNoise = 'off';
 let pomoVolVal = 15;
 let pomoActx = null, pomoNoiseNode = null, pomoGainNode = null;
 let pomoSessionStartTime = null;
+let pomoSessionStartAt = null;
+let pomoSessionEndAt = null;
+let pomoPausedAt = null;
+let pomoPausedAccumMs = 0;
+let pomoCompletedGuard = false;
 
 const POMO_CIRC = 2 * Math.PI * 75;
 const POMO_MODE_NAMES = {focus:'Focus', short:'Short Break', long:'Long Break'};
@@ -2323,6 +2328,63 @@ function pomoUpdateRing() {
   ring.style.strokeDashoffset = POMO_CIRC * (1 - pct);
 }
 
+function pomoClearTicker() {
+  if (pomoTicker) clearInterval(pomoTicker);
+  pomoTicker = null;
+}
+
+function pomoClearSessionClock(clearStartTime=true) {
+  pomoSessionStartAt = null;
+  pomoSessionEndAt = null;
+  pomoPausedAt = null;
+  pomoPausedAccumMs = 0;
+  pomoCompletedGuard = false;
+  if (clearStartTime) pomoSessionStartTime = null;
+}
+
+function pomoStartSessionClock() {
+  const now = Date.now();
+  pomoSessionStartAt = now;
+  pomoSessionEndAt = now + pomoTotal * 1000;
+  pomoPausedAt = null;
+  pomoPausedAccumMs = 0;
+  pomoCompletedGuard = false;
+  pomoSessionStartTime = new Date(now);
+}
+
+function pomoResetClockToCurrentTotal() {
+  if (pomoRunning) {
+    pomoStartSessionClock();
+  } else {
+    pomoClearSessionClock();
+  }
+}
+
+function pomoStartTicker() {
+  pomoClearTicker();
+  pomoTicker = setInterval(pomoSyncFromClock, 250);
+}
+
+function pomoCompleteFromClock() {
+  if (pomoCompletedGuard) return;
+  pomoCompletedGuard = true;
+  pomoRemaining = 0;
+  pomoUpdateDisplay(); pomoUpdateRing();
+  pomoClearTicker(); pomoRunning = false;
+  const pb = document.getElementById('pomo-playbtn');
+  if (pb) pb.textContent = String.fromCharCode(9654);
+  pomoStopNoise();
+  pomoOnSessionEnd();
+}
+
+function pomoSyncFromClock() {
+  if (!pomoRunning || !pomoSessionEndAt) return;
+  const now = Date.now();
+  pomoRemaining = Math.max(0, Math.ceil((pomoSessionEndAt - now) / 1000));
+  pomoUpdateDisplay(); pomoUpdateRing();
+  if (now >= pomoSessionEndAt) pomoCompleteFromClock();
+}
+
 function pomoUpdateModeBtns() {
   ['focus','short','long'].forEach(m => {
     const btn = document.getElementById('pbtn-' + m);
@@ -2339,7 +2401,8 @@ function pomoSetMode(m, autoStart=false) {
   const mins = {focus:pomoCfg.focus, short:pomoCfg.short, long:pomoCfg.long};
   pomoRemaining = mins[m] * 60;
   pomoTotal = pomoRemaining;
-  if (pomoRunning) { clearInterval(pomoTicker); pomoRunning = false; }
+  pomoClearTicker(); pomoRunning = false;
+  pomoClearSessionClock();
   pomoUpdateDisplay(); pomoUpdateRing(); pomoUpdateModeBtns();
   if (m === 'focus') pomoUpdateDots(); // only update dots when returning to focus
   const pb = document.getElementById('pomo-playbtn');
@@ -2357,7 +2420,9 @@ function pomoSetMode(m, autoStart=false) {
 
 function pomoToggle() {
   if (pomoRunning) {
-    clearInterval(pomoTicker); pomoRunning = false;
+    pomoSyncFromClock();
+    pomoPausedAt = Date.now();
+    pomoClearTicker(); pomoRunning = false;
     const pb = document.getElementById('pomo-playbtn');
     if (pb) pb.textContent = '▶';
     pomoSetStatus('Paused');
@@ -2366,7 +2431,16 @@ function pomoToggle() {
     if (db && pomoMode === 'focus') db.style.display = 'inline-block';
   } else {
     if (pomoRemaining <= 0) pomoRemaining = pomoTotal;
-    if (pomoMode === 'focus' && pomoRemaining === pomoTotal) pomoSessionStartTime = new Date();
+    if (pomoPausedAt) {
+      const pauseMs = Date.now() - pomoPausedAt;
+      pomoPausedAccumMs += pauseMs;
+      pomoSessionEndAt += pauseMs;
+      pomoPausedAt = null;
+    } else if (!pomoSessionStartAt || pomoRemaining === pomoTotal) {
+      pomoStartSessionClock();
+    } else if (!pomoSessionEndAt) {
+      pomoSessionEndAt = Date.now() + pomoRemaining * 1000;
+    }
     pomoRunning = true;
     const pb = document.getElementById('pomo-playbtn');
     if (pb) pb.textContent = '⏸';
@@ -2374,17 +2448,8 @@ function pomoToggle() {
     const db = document.getElementById('pomo-done-btn');
     if (db) db.style.display = 'none';
     if (pomoMode === 'focus') pomoResumeNoise(); else pomoStopNoise();
-    pomoTicker = setInterval(() => {
-      pomoRemaining--;
-      pomoUpdateDisplay(); pomoUpdateRing();
-      if (pomoRemaining <= 0) {
-        clearInterval(pomoTicker); pomoRunning = false;
-        const pb = document.getElementById('pomo-playbtn');
-        if (pb) pb.textContent = '▶';
-        pomoStopNoise();
-        pomoOnSessionEnd();
-      }
-    }, 1000);
+    pomoStartTicker();
+    pomoSyncFromClock();
   }
 }
 
@@ -2447,13 +2512,21 @@ function pomoOnSessionEnd() {
 }
 
 function pomoDoneEarly() {
-  if (!pomoSessionStartTime) return;
-  clearInterval(pomoTicker); pomoRunning = false;
+  if (pomoMode !== 'focus' || !pomoSessionStartAt || pomoCompletedGuard) return;
+  if (pomoRunning) {
+    pomoSyncFromClock();
+    if (pomoCompletedGuard) return;
+  }
+  pomoClearTicker(); pomoRunning = false;
+  pomoCompletedGuard = true;
   const pb = document.getElementById('pomo-playbtn');
   if (pb) pb.textContent = '▶';
   const db = document.getElementById('pomo-done-btn');
   if (db) db.style.display = 'none';
-  const elapsedMins = Math.max(1, Math.round((pomoTotal - pomoRemaining) / 60));
+  const now = Date.now();
+  const currentPauseMs = pomoPausedAt ? now - pomoPausedAt : 0;
+  const elapsedMs = Math.max(0, now - pomoSessionStartAt - pomoPausedAccumMs - currentPauseMs);
+  const elapsedMins = Math.min(Math.round(pomoTotal / 60), Math.max(1, Math.round(elapsedMs / 60000)));
   const taskSel = document.getElementById('pomo-task-sel');
   const taskId = taskSel ? parseInt(taskSel.value) || null : null;
   const taskName = taskId ? (tasks.find(t => t.id === taskId) || {}).name || '—' : 'Others';
@@ -2482,13 +2555,15 @@ function pomoDoneEarly() {
   pomoUpdateDisplay(); pomoUpdateRing();
   pomoSetStatus('✅ Done! ' + elapsedMins + ' min logged.');
   pomoStopNoise();
+  pomoClearSessionClock();
 }
 
 let _pomoResetCount = 0;
 let _pomoResetTimer = null;
 
 function pomoReset() {
-  clearInterval(pomoTicker); pomoRunning = false;
+  pomoClearTicker(); pomoRunning = false;
+  pomoClearSessionClock();
   pomoRemaining = pomoTotal;
   pomoUpdateDisplay(); pomoUpdateRing();
   const pb = document.getElementById('pomo-playbtn');
@@ -2515,13 +2590,13 @@ function pomoReset() {
 }
 
 function pomoSkip() {
-  clearInterval(pomoTicker); pomoRunning = false;
+  pomoClearTicker(); pomoRunning = false;
+  pomoClearSessionClock();
   pomoStopNoise();
   const pb = document.getElementById('pomo-playbtn');
   if (pb) pb.textContent = '▶';
   const db = document.getElementById('pomo-done-btn');
   if (db) db.style.display = 'none';
-  pomoSessionStartTime = null;
   if (pomoMode === 'focus') {
     pomoSession++;
     pomoUpdateDots();
@@ -2561,6 +2636,7 @@ function pomoAdj(key, delta) {
   if (el) el.value = pomoCfg[key];
   if ((key === 'focus' && pomoMode === 'focus') || (key === 'short' && pomoMode === 'short') || (key === 'long' && pomoMode === 'long')) {
     pomoRemaining = pomoCfg[key] * 60; pomoTotal = pomoRemaining;
+    pomoResetClockToCurrentTotal();
     pomoUpdateDisplay(); pomoUpdateRing();
   }
   if (key === 'rounds') pomoUpdateDots();
@@ -2573,6 +2649,7 @@ function pomoSetDirect(key, raw) {
   pomoCfg[key] = Math.max(mn[key], Math.min(mx[key], v));
   if ((key === 'focus' && pomoMode === 'focus') || (key === 'short' && pomoMode === 'short') || (key === 'long' && pomoMode === 'long')) {
     pomoRemaining = pomoCfg[key] * 60; pomoTotal = pomoRemaining;
+    pomoResetClockToCurrentTotal();
     pomoUpdateDisplay(); pomoUpdateRing();
   }
   if (key === 'rounds') pomoUpdateDots();
@@ -2587,6 +2664,7 @@ function pomoBlur(key, inputEl) {
   inputEl.value = pomoCfg[key];
   if ((key === 'focus' && pomoMode === 'focus') || (key === 'short' && pomoMode === 'short') || (key === 'long' && pomoMode === 'long')) {
     pomoRemaining = pomoCfg[key] * 60; pomoTotal = pomoRemaining;
+    pomoResetClockToCurrentTotal();
     pomoUpdateDisplay(); pomoUpdateRing();
   }
 }
@@ -3239,6 +3317,18 @@ function pomoInit() {
   pomoPopulateTaskSelect();
   updatePomoNavBadge();
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) pomoSyncFromClock();
+});
+
+window.addEventListener('focus', () => {
+  pomoSyncFromClock();
+});
+
+window.addEventListener('pageshow', () => {
+  pomoSyncFromClock();
+});
 
 // ── Manual Entry
 function openManualEntry() {
