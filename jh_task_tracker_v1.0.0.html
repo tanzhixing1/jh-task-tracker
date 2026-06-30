@@ -156,6 +156,10 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
 .proj-view-btn{padding:5px 13px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
 .proj-view-btn.active{background:var(--surface);color:var(--text2);font-weight:700}
 .proj-view-btn svg{width:14px;height:14px;flex-shrink:0}
+.proj-archive-filter{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface2);margin-right:8px}
+.proj-archive-btn{padding:5px 11px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'Lato',sans-serif;transition:all .15s}
+.proj-archive-btn.active{background:var(--surface);color:var(--text2);font-weight:700}
+.project-archived-tag{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--surface3);color:var(--muted);border:1px solid var(--border);font-weight:700;white-space:nowrap}
 .proj-list-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .proj-list-head{display:grid;grid-template-columns:1fr 160px 170px 100px 110px;gap:0;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border)}
 .proj-list-th{font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;display:flex;align-items:center;gap:3px;white-space:nowrap}
@@ -625,15 +629,22 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
         <div style="display:flex;align-items:baseline;gap:10px">
           <span style="font-size:13px;color:var(--muted)" id="proj-total-count"></span>
         </div>
-        <div class="proj-view-toggle">
-          <button class="proj-view-btn" id="pvbtn-list" onclick="setProjView('list')" title="List view">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
-            List
-          </button>
-          <button class="proj-view-btn active" id="pvbtn-kanban" onclick="setProjView('kanban')" title="Kanban view">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="9" rx="1"/><rect x="11" y="2" width="4" height="11" rx="1"/></svg>
-            Kanban
-          </button>
+        <div style="display:flex;align-items:center">
+          <div class="proj-archive-filter">
+            <button class="proj-archive-btn active" id="paf-active" onclick="setProjArchiveFilter('active')">Active</button>
+            <button class="proj-archive-btn" id="paf-archived" onclick="setProjArchiveFilter('archived')">Archived</button>
+            <button class="proj-archive-btn" id="paf-all" onclick="setProjArchiveFilter('all')">All</button>
+          </div>
+          <div class="proj-view-toggle">
+            <button class="proj-view-btn" id="pvbtn-list" onclick="setProjView('list')" title="List view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+              List
+            </button>
+            <button class="proj-view-btn active" id="pvbtn-kanban" onclick="setProjView('kanban')" title="Kanban view">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="4" height="12" rx="1"/><rect x="6" y="2" width="4" height="9" rx="1"/><rect x="11" y="2" width="4" height="11" rx="1"/></svg>
+              Kanban
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1188,13 +1199,24 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
               <span>Session Log</span>
               <button class="btn" onclick="openManualEntry()" style="font-size:10px;padding:3px 9px;letter-spacing:.02em">+ Add Entry</button>
             </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0">
+              <select class="daily-task-select" id="pomo-log-filter" onchange="pomoSetLogFilter(this.value)" style="max-width:130px;font-size:11px;padding:5px 7px">
+                <option value="all">All current</option>
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="date">Date</option>
+              </select>
+              <input type="date" id="pomo-log-date" onchange="pomoSetLogDate(this.value)" style="display:none;font-size:11px;border:1px solid var(--border);border-radius:7px;padding:5px 7px;background:var(--surface);color:var(--text);font-family:'Lato',sans-serif">
+              <span id="pomo-log-filter-note" style="font-size:10px;color:var(--muted2)">Current log only; archived history is summarized.</span>
+            </div>
             <div class="pomo-log" id="pomo-log" style="flex:1;overflow-y:auto;min-height:0"></div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:12px;flex-shrink:0">
               <div style="display:flex;gap:8px">
-                <button class="btn" onclick="pomoClearLog()" style="font-size:11px;padding:5px 10px;color:var(--rose);border-color:var(--rose)">✕ Clear All</button>
+                <button class="btn" onclick="pomoArchiveCurrentLog()" style="font-size:11px;padding:5px 10px;color:var(--muted);border-color:var(--border2)">Archive Current Log</button>
+                <button class="btn" onclick="pomoResetAllFocusData()" style="font-size:11px;padding:5px 10px;color:var(--rose);border-color:rgba(138,90,90,.35)">Reset All</button>
                 <button class="btn" onclick="openPomoExportModal()" style="font-size:11px;padding:5px 10px">⬇ Export Excel</button>
               </div>
-              <span id="pomo-log-hint" style="font-size:10px;color:var(--muted2)">Focus log supports up to 100 sessions</span>
+              <span id="pomo-log-hint" style="font-size:10px;color:var(--muted2)">Current log keeps the latest 100 sessions</span>
             </div>
           </div>
         </div>
@@ -1229,7 +1251,11 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
     </div>
     <div class="form-group"><label class="form-label">Notes</label><div style="position:relative"><textarea class="form-textarea" id="f-notes" placeholder="Any details..." style="padding-right:70px;padding-bottom:32px"></textarea><button type="button" title="Translate to English" data-lang="en" oncontextmenu="event.preventDefault();toggleTranslateLang(this)" onclick="inlineTranslate('f-notes', this)" style="position:absolute;right:8px;bottom:8px;font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Lato',sans-serif" onmouseover="this.style.borderColor='var(--sage)';this.style.color='var(--sage2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">🌐 EN</button></div></div>
     <div class="modal-actions" style="justify-content:space-between">
-      <button class="btn" id="task-delete-action" style="display:none;border-color:rgba(138,90,90,.3);color:var(--rose);background:rgba(138,90,90,.06)" onclick="deleteTaskFromModal()">✕ Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="task-archive-action" style="display:none;border-color:var(--border2);color:var(--muted);background:var(--surface2)" onclick="archiveTaskFromModal()">Archive</button>
+        <button class="btn" id="task-restore-action" style="display:none;border-color:rgba(90,138,106,.35);color:var(--sage2);background:rgba(90,138,106,.08)" onclick="restoreTaskFromModal()">Restore</button>
+        <button class="btn" id="task-delete-action" style="display:none;border-color:rgba(138,90,90,.3);color:var(--rose);background:rgba(138,90,90,.06)" onclick="deleteTaskFromModal()">✕ Delete</button>
+      </div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="closeTaskModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveTask()">Save</button>
@@ -1373,14 +1399,37 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
 
 <script>
 const TASKS_KEY = 'jhtt_tasks';
+const DAILY_PROJECT_FILTER_KEY = 'jhtt_daily_project_filter';
 
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || 'null') || [];
 let kanbanFilter = 'all';
 let dragId = null;
+let projArchiveFilter = 'active';
+let dailyProjectFilter = localStorage.getItem(DAILY_PROJECT_FILTER_KEY) || 'all';
+
+function normalizeProjectArchiveFields() {
+  let changed = false;
+  tasks.forEach(t => {
+    if (typeof t.archived === 'undefined') { t.archived = false; changed = true; }
+    if (typeof t.archivedAt === 'undefined') { t.archivedAt = null; changed = true; }
+  });
+  if (changed) save();
+}
+
+function activeProjects() {
+  return tasks.filter(t => t.archived !== true);
+}
+
+function visibleProjectsForList() {
+  if (projArchiveFilter === 'archived') return tasks.filter(t => t.archived === true);
+  if (projArchiveFilter === 'all') return tasks;
+  return activeProjects();
+}
 
 function save() {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
 }
+normalizeProjectArchiveFields();
 function showToast(m) {
   const t = document.getElementById('toast');
   t.textContent = m; t.classList.add('show');
@@ -1473,9 +1522,7 @@ function initDropZones() {
 }
 
 function getActualFocusMins(taskId, taskName) {
-  if (!pomoLog) return 0;
-  return pomoLog.filter(e => e.type === 'focus' && (e.taskId === taskId || e.taskName === taskName))
-                .reduce((s, e) => s + (e.mins || 0), 0);
+  return getProjectFocusMinutes(taskId, taskName);
 }
 
 function fmtFocusTime(mins) {
@@ -1490,7 +1537,7 @@ function renderKanban() {
     const col = document.getElementById('col-' + status);
     if (col) col.style.display = (kanbanFilter === 'all' || kanbanFilter === status) ? '' : 'none';
 
-    const colTasks = tasks.filter(t => t.status === status);
+    const colTasks = activeProjects().filter(t => t.status === status);
     const cnt = document.getElementById('kc-' + status);
     if (cnt) cnt.textContent = colTasks.length;
 
@@ -1596,6 +1643,7 @@ const STATUS_DOTS = {'pending':'var(--muted2)','in-progress':'var(--sage)','in-r
 const PRIORITY_ORDER = {'high':1,'med':2,'low':3,'':4};
 
 function setProjView(v) {
+  if (projArchiveFilter !== 'active' && v === 'kanban') v = 'list';
   projView = v;
   const listEl = document.getElementById('proj-list-view');
   const kanbanEl = document.getElementById('proj-kanban-view');
@@ -1617,7 +1665,23 @@ function setProjView(v) {
     initDropZones();
   }
   const ct = document.getElementById('proj-total-count');
-  if (ct) ct.textContent = tasks.length + ' project' + (tasks.length !== 1 ? 's' : '');
+  if (ct) {
+    const visibleCount = projView === 'kanban' ? activeProjects().length : visibleProjectsForList().length;
+    ct.textContent = visibleCount + ' project' + (visibleCount !== 1 ? 's' : '');
+  }
+}
+
+function setProjArchiveFilter(filter) {
+  projArchiveFilter = filter || 'active';
+  ['active','archived','all'].forEach(k => {
+    const btn = document.getElementById('paf-' + k);
+    if (btn) btn.classList.toggle('active', projArchiveFilter === k);
+  });
+  if (projArchiveFilter !== 'active') {
+    setProjView('list');
+  } else {
+    setProjView(projView);
+  }
 }
 
 function setProjSort(key) {
@@ -1645,7 +1709,8 @@ function renderProjList() {
     }
   });
 
-  const sorted = [...tasks].sort((a, b) => {
+  const visible = visibleProjectsForList();
+  const sorted = [...visible].sort((a, b) => {
     let av, bv;
     if (projSortKey === 'name') return projSortDir * a.name.localeCompare(b.name);
     if (projSortKey === 'status') { av = STATUS_ORDER.indexOf(a.status); bv = STATUS_ORDER.indexOf(b.status); }
@@ -1661,7 +1726,8 @@ function renderProjList() {
 
   body.innerHTML = '';
   if (sorted.length === 0) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon" style="color:var(--accent)"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\"/><path d=\"M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2\"/><path d=\"M3 13a20 20 0 0 0 18 0\"/></svg></div><div class="empty-text">No projects yet</div></div>';
+    const emptyText = projArchiveFilter === 'archived' ? 'No archived projects' : 'No projects yet';
+    body.innerHTML = '<div class="empty"><div class="empty-icon" style="color:var(--accent)"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\"/><path d=\"M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2\"/><path d=\"M3 13a20 20 0 0 0 18 0\"/></svg></div><div class="empty-text">'+emptyText+'</div></div>';
     return;
   }
 
@@ -1674,7 +1740,7 @@ function renderProjList() {
     const row = document.createElement('div');
     row.className = 'proj-list-row';
     row.innerHTML = `
-      <span class="proj-list-name">${t.name}</span>
+      <span class="proj-list-name">${t.name}${t.archived ? ' <span class="project-archived-tag">archived</span>' : ''}</span>
       <span class="proj-list-status">
         <span style="width:7px;height:7px;border-radius:50%;background:${STATUS_DOTS[t.status]||'#9aaa94'};display:inline-block;flex-shrink:0"></span>
         ${STATUS_LABELS[t.status] || t.status}
@@ -1690,11 +1756,12 @@ function renderProjList() {
 
 // ── Update badges & stats
 function updateBadges() {
-  const ip = tasks.filter(t => t.status==='in-progress').length;
-  const pend = tasks.filter(t => t.status==='pending').length;
-  const done = tasks.filter(t => t.status==='done').length;
-  const review = tasks.filter(t => t.status==='in-review').length;
-  ['nb-all','s-total'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=tasks.length; });
+  const active = activeProjects();
+  const ip = active.filter(t => t.status==='in-progress').length;
+  const pend = active.filter(t => t.status==='pending').length;
+  const done = active.filter(t => t.status==='done').length;
+  const review = active.filter(t => t.status==='in-review').length;
+  ['nb-all','s-total'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=active.length; });
   ['nb-ip','s-ip'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=ip; });
   ['nb-pend','s-pend'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=pend; });
   const srDash = document.getElementById('s-review-dash'); if(srDash) srDash.textContent=review;
@@ -1705,7 +1772,7 @@ function updateBadges() {
 // ── Main render
 function render() {
   updateBadges();
-  const sorted = [...tasks].sort((a,b) => parseDate(b.date||0) - new Date(a.date||0));
+  const sorted = [...activeProjects()].sort((a,b) => parseDate(b.date||0) - new Date(a.date||0));
   const dl = document.getElementById('dashboard-list');
   if (dl) { dl.innerHTML = sorted.slice(0,9).map(taskRow).join('') || '<div class="empty"><div class="empty-icon" style="color:var(--accent)"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\"/><path d=\"M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2\"/><path d=\"M3 13a20 20 0 0 0 18 0\"/></svg></div><div class="empty-text">No projects yet</div></div>'; bindDashboardDrag(); }
   document.getElementById('rc-count').textContent = sorted.length;
@@ -1789,7 +1856,7 @@ function setView(v, btn) {
   { var ma = document.getElementById('main-area'); if (ma) { ma.classList.remove('app-fullscreen'); } document.body.style.overflow = ''; updateFsIcon(false); }
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (v === 'kanban') { kanbanFilter = 'all'; setProjView(projView); const ct=document.getElementById('proj-total-count'); if(ct) ct.textContent=tasks.length+' project'+(tasks.length!==1?'s':''); }
+  if (v === 'kanban') { kanbanFilter = 'all'; setProjArchiveFilter(projArchiveFilter); }
   if (v === 'pomodoro') { pomoPopulateTaskSelect(); pomoRenderNoteChips(); pomoRenderLog(); pomoRenderStats(); pomoInitCountUpBtns(); requestAnimationFrame(syncPomoHeight); }
   if (v === 'weekly') { wrRender(); }
   if (v === 'daily') { dailyRender(); }
@@ -1862,16 +1929,54 @@ function openTaskModal(id) {
   document.getElementById('modal-title').textContent = task ? 'Edit project' : 'New project';
   const delBtn = document.getElementById('task-delete-action');
   delBtn.style.display = task ? '' : 'none';
+  const archiveBtn = document.getElementById('task-archive-action');
+  const restoreBtn = document.getElementById('task-restore-action');
+  if (archiveBtn) archiveBtn.style.display = task && task.archived !== true ? '' : 'none';
+  if (restoreBtn) restoreBtn.style.display = task && task.archived === true ? '' : 'none';
   document.getElementById('task-modal').classList.add('open');
+}
+function projectHasFocusSessions(projectId, projectName) {
+  const id = String(projectId);
+  if ((pomoLog || []).some(e => String(e.taskId || '') === id || e.taskName === projectName)) return true;
+  const archived = getPomoArchivedTotals();
+  return !!Object.values(archived.byProject || {}).find(p => String(p.projectId || '') === id || p.name === projectName);
+}
+async function archiveTaskFromModal() {
+  const id = parseInt(document.getElementById('edit-id').value);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  const ok = await customConfirm('This will hide the project from active boards, but keep its tasks, focus time, weekly reports, and history.', 'Archive project?', 'Archive', 'Cancel', 'border-color:var(--border2);color:var(--muted);background:var(--surface2)');
+  if (!ok) return;
+  task.archived = true;
+  task.archivedAt = new Date().toISOString();
+  save(); render(); renderKanban(); renderProjList(); pomoPopulateTaskSelect(); closeTaskModal();
+  showToast('Project archived');
+}
+function restoreTaskFromModal() {
+  const id = parseInt(document.getElementById('edit-id').value);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.archived = false;
+  task.archivedAt = null;
+  save(); render(); setProjArchiveFilter('active'); pomoPopulateTaskSelect(); closeTaskModal();
+  showToast('Project restored');
 }
 async function deleteTaskFromModal() {
   const id = document.getElementById('edit-id').value;
   if (!id) return;
-  const ok = await customConfirm('This task will be permanently removed.', 'Delete task?');
+  const task = tasks.find(t => t.id === parseInt(id));
+  if (!task) return;
+  const hasSessions = projectHasFocusSessions(task.id, task.name);
+  const warning = hasSessions
+    ? 'This project has focus sessions linked to it. Deleting it may affect project lookup. Archive is recommended instead.'
+    : 'This task will be permanently removed.';
+  const ok = await customConfirm(warning, 'Permanently delete project?', 'Continue', 'Cancel');
   if (!ok) return;
+  const typed = window.prompt('Type DELETE to permanently delete this project.');
+  if (typed !== 'DELETE') { showToast('Delete cancelled'); return; }
   tasks = tasks.filter(t => t.id !== parseInt(id));
   save(); render(); closeTaskModal();
-  showToast('Task deleted');
+  showToast('Project deleted');
 }
 function closeTaskModal() { document.getElementById('task-modal').classList.remove('open'); }
 function saveTask() {
@@ -1888,6 +1993,8 @@ function saveTask() {
     progress: existing ? existing.progress : 0,
     notes: document.getElementById('f-notes').value.trim(),
     statusHistory: existing ? (existing.statusHistory || []) : [],
+    archived: existing ? existing.archived === true : false,
+    archivedAt: existing ? (existing.archivedAt || null) : null,
   };
   // Record status change if editing and status changed, or new task
   if (existing && existing.status !== newStatus) {
@@ -1987,10 +2094,8 @@ function wrRender() {
     var due = t.due ? parseDate(t.due) : null;
     return (d && d >= start && d <= end) || (due && due >= start && due <= end);
   });
-  var weekSessions = pomoLog.filter(function(e) {
-    var d = new Date(e.ts);
-    return d >= start && d <= end && e.type === 'focus';
-  });
+  var weekFocus = getWeeklyFocusStats(start, end);
+  var weekSessions = weekFocus.currentSessions;
   var doneCount = tasks.filter(function(t){
     if (t.status !== 'done') return false;
     if (t.completedAt) {
@@ -2004,7 +2109,7 @@ function wrRender() {
   // Use status history to count tasks that were in-progress/in-review during this week
   var ipCount = tasks.filter(function(t) { return statusAtDate(t, end) === 'in-progress'; }).length;
   var reviewCount = tasks.filter(function(t) { return statusAtDate(t, end) === 'in-review'; }).length;
-  var totalMins = weekSessions.reduce(function(s,e){ return s + (e.mins||0); }, 0);
+  var totalMins = weekFocus.totalMinutes;
   var h = Math.floor(totalMins/60), m = totalMins%60;
   function el(id){ return document.getElementById(id); }
   if (el('wr-s-done')) el('wr-s-done').textContent = doneCount;
@@ -2018,25 +2123,25 @@ function wrRender() {
     if (el('wr-s-review')) { el('wr-s-review').textContent = '—'; el('wr-s-review').style.opacity='.3'; }
   }
   if (el('wr-s-focus')) el('wr-s-focus').textContent = h + 'h ' + m + 'm';
-  wrRenderHeatmap(start, weekSessions);
-  wrRenderFocusBars(weekSessions);
+  wrRenderHeatmap(start, weekFocus);
+  wrRenderFocusBars(weekFocus);
   wrRenderTaskTable(weekTasks);
   wrRenderFocusList(weekSessions);
   wrRenderDeadlines(wrOffset);
   wrRenderDone(start, end, wrOffset);
 }
 
-function wrRenderHeatmap(start, sessions) {
+function wrRenderHeatmap(start, weekFocus) {
   var labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var hmEl = document.getElementById('wr-heatmap');
   var lblEl = document.getElementById('wr-hm-labels');
   var totEl = document.getElementById('wr-hm-total');
   if (!hmEl) return;
   var dayMins = [0,0,0,0,0,0,0];
-  sessions.forEach(function(e) {
-    var d = new Date(e.ts);
+  Object.entries((weekFocus && weekFocus.byDate) || {}).forEach(function(pair) {
+    var d = parseDate(pair[0]);
     var idx = (d.getDay() + 6) % 7;
-    dayMins[idx] += (e.mins || 0);
+    dayMins[idx] += (pair[1].minutes || 0);
   });
   var maxMins = Math.max.apply(null, dayMins.concat([1]));
   var totalMins = dayMins.reduce(function(a,b){return a+b;},0);
@@ -2061,13 +2166,13 @@ function wrRenderHeatmap(start, sessions) {
   if (lblEl) lblEl.innerHTML = labels.map(function(l){ return '<div class="wr-hm-lbl">' + l + '</div>'; }).join('');
 }
 
-function wrRenderFocusBars(sessions) {
+function wrRenderFocusBars(weekFocus) {
   var el = document.getElementById('wr-focus-bars');
   if (!el) return;
   var taskMap = {};
-  sessions.forEach(function(e) {
-    var key = e.taskName || 'Others';
-    taskMap[key] = (taskMap[key] || 0) + (e.mins || 0);
+  Object.values((weekFocus && weekFocus.byProject) || {}).forEach(function(p) {
+    var key = p.name || 'Others';
+    taskMap[key] = (taskMap[key] || 0) + (p.minutes || 0);
   });
   var sorted = Object.entries(taskMap).sort(function(a,b){return b[1]-a[1];}).slice(0,6);
   if (sorted.length === 0) { el.innerHTML = '<div class="empty empty-sm"><div class="empty-icon">⏱</div><div class="empty-text">No focus sessions this week</div></div>'; return; }
@@ -2191,10 +2296,8 @@ function wrGenerateSummary() {
   var range = wrGetWeekRange(wrOffset);
   var start = range.start, end = range.end;
 
-  var weekSessions = pomoLog.filter(function(e) {
-    var d = new Date(e.ts);
-    return d >= start && d <= end && e.type === 'focus';
-  });
+  var weekFocus = getWeeklyFocusStats(start, end);
+  var weekSessions = weekFocus.currentSessions;
 
   // Done: filtered by date range
   var doneList = tasks.filter(function(t) {
@@ -2208,7 +2311,7 @@ function wrGenerateSummary() {
   var ipList = tasks.filter(function(t){ return statusAtDate(t, end) === 'in-progress'; });
   var reviewList = tasks.filter(function(t){ return statusAtDate(t, end) === 'in-review'; });
 
-  var totalMins = weekSessions.reduce(function(s,e){return s+(e.mins||0);},0);
+  var totalMins = weekFocus.totalMinutes;
   var h = Math.floor(totalMins/60), m = totalMins%60;
   var reviewCount = reviewList.length;
   var focusStr = (h > 0 ? h + 'h ' : '') + m + 'm';
@@ -2239,7 +2342,7 @@ function wrGenerateSummary() {
     lines.push('');
   }
   var taskMap = {};
-  weekSessions.forEach(function(e){ var k=e.taskName||'Others'; taskMap[k]=(taskMap[k]||0)+(e.mins||0); });
+  Object.values(weekFocus.byProject || {}).forEach(function(p){ var k=p.name||'Others'; taskMap[k]=(taskMap[k]||0)+(p.minutes||0); });
   var sorted = Object.entries(taskMap).sort(function(a,b){return b[1]-a[1];});
   if (sorted.length > 0) {
     lines.push('FOCUS');
@@ -2282,6 +2385,7 @@ function closePomoSettings() {
 
 // ── Pomodoro Timer
 const POMO_LOG_KEY = 'jhtt_pomo_log';
+const POMO_ARCHIVED_TOTALS_KEY = 'jhtt_pomo_archived_totals';
 let pomoCfg = {focus:60,short:5,long:15,rounds:4};
 let pomoMode = 'focus';
 let pomoRemaining = 60*60;
@@ -2291,6 +2395,208 @@ let pomoTicker = null;
 let pomoCountUp = localStorage.getItem('jhtt_pomo_countup') === '1';
 let pomoSession = 0;
 let pomoLog = JSON.parse(localStorage.getItem(POMO_LOG_KEY) || '[]');
+function createEmptyPomoArchivedTotals() {
+  return { totalMinutes: 0, totalSessions: 0, byProject: {}, byDate: {}, byMonth: {}, byDateProject: {} };
+}
+function normalizePomoArchivedTotals(raw) {
+  const base = createEmptyPomoArchivedTotals();
+  if (!raw || typeof raw !== 'object') return base;
+  return {
+    totalMinutes: raw.totalMinutes || 0,
+    totalSessions: raw.totalSessions || 0,
+    byProject: raw.byProject || {},
+    byDate: raw.byDate || {},
+    byMonth: raw.byMonth || {},
+    byDateProject: raw.byDateProject || {}
+  };
+}
+function getPomoArchivedTotals() {
+  try {
+    return normalizePomoArchivedTotals(JSON.parse(localStorage.getItem(POMO_ARCHIVED_TOTALS_KEY) || 'null'));
+  } catch(e) {
+    console.warn('Invalid archived pomodoro totals', e);
+    return createEmptyPomoArchivedTotals();
+  }
+}
+let pomoArchivedTotals = getPomoArchivedTotals();
+function savePomoArchivedTotals() {
+  localStorage.setItem(POMO_ARCHIVED_TOTALS_KEY, JSON.stringify(pomoArchivedTotals));
+}
+function pomoSessionProjectName(entry) {
+  if (entry.taskName) return entry.taskName;
+  if (entry.projectName) return entry.projectName;
+  if (entry.taskId) {
+    const t = tasks.find(task => task.id === entry.taskId);
+    return t ? t.name : 'Deleted Project';
+  }
+  return 'Others';
+}
+function pomoSessionProjectKey(entry) {
+  return entry.taskId ? 'id:' + entry.taskId : 'name:' + pomoSessionProjectName(entry);
+}
+function pomoNormalizeSession(entry) {
+  if (!entry) return entry;
+  if (!entry.ts) {
+    entry.ts = new Date().toISOString();
+  } else if (typeof entry.ts !== 'string') {
+    const rawTs = Number(entry.ts);
+    const tsMs = rawTs > 0 && rawTs < 100000000000 ? rawTs * 1000 : rawTs;
+    const dt = new Date(tsMs);
+    entry.ts = isNaN(dt.getTime()) ? new Date().toISOString() : dt.toISOString();
+  }
+  if (!entry.taskName && entry.projectName) entry.taskName = entry.projectName;
+  if (!entry.taskName) entry.taskName = pomoSessionProjectName(entry);
+  return entry;
+}
+pomoLog = Array.isArray(pomoLog) ? pomoLog.map(pomoNormalizeSession) : [];
+function pomoArchiveSessions(sessions) {
+  const focusSessions = (sessions || []).filter(e => e && e.type === 'focus');
+  if (!focusSessions.length) return;
+  focusSessions.forEach(e => {
+    e = pomoNormalizeSession(e);
+    const mins = e.mins || 0;
+    const date = e.ts ? e.ts.slice(0,10) : new Date().toISOString().slice(0,10);
+    const month = date.slice(0,7);
+    const key = pomoSessionProjectKey(e);
+    const name = pomoSessionProjectName(e);
+    pomoArchivedTotals.totalMinutes += mins;
+    pomoArchivedTotals.totalSessions += 1;
+    if (!pomoArchivedTotals.byProject[key]) pomoArchivedTotals.byProject[key] = { projectId: e.taskId || null, name, minutes: 0, sessions: 0 };
+    pomoArchivedTotals.byProject[key].minutes += mins;
+    pomoArchivedTotals.byProject[key].sessions += 1;
+    if (!pomoArchivedTotals.byDate[date]) pomoArchivedTotals.byDate[date] = { minutes: 0, sessions: 0 };
+    pomoArchivedTotals.byDate[date].minutes += mins;
+    pomoArchivedTotals.byDate[date].sessions += 1;
+    if (!pomoArchivedTotals.byDateProject[date]) pomoArchivedTotals.byDateProject[date] = {};
+    if (!pomoArchivedTotals.byDateProject[date][key]) pomoArchivedTotals.byDateProject[date][key] = { projectId: e.taskId || null, name, minutes: 0, sessions: 0 };
+    pomoArchivedTotals.byDateProject[date][key].minutes += mins;
+    pomoArchivedTotals.byDateProject[date][key].sessions += 1;
+    if (!pomoArchivedTotals.byMonth[month]) pomoArchivedTotals.byMonth[month] = { minutes: 0, sessions: 0 };
+    pomoArchivedTotals.byMonth[month].minutes += mins;
+    pomoArchivedTotals.byMonth[month].sessions += 1;
+  });
+  savePomoArchivedTotals();
+}
+function pomoSaveCurrentLog() {
+  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
+}
+function enforcePomoLogLimit() {
+  pomoLog.sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
+  if (pomoLog.length > 100) {
+    const overflow = pomoLog.slice(100);
+    pomoArchiveSessions(overflow);
+    pomoLog = pomoLog.slice(0, 100);
+  }
+  pomoSaveCurrentLog();
+}
+function getCurrentPomoStats() {
+  return (pomoLog || []).filter(e => e.type === 'focus').reduce((acc, e) => {
+    const mins = e.mins || 0;
+    acc.totalMinutes += mins;
+    acc.totalSessions += 1;
+    const date = e.ts ? e.ts.slice(0,10) : '';
+    const month = date ? date.slice(0,7) : '';
+    const key = pomoSessionProjectKey(e);
+    const name = pomoSessionProjectName(e);
+    if (!acc.byProject[key]) acc.byProject[key] = { projectId: e.taskId || null, name, minutes: 0, sessions: 0 };
+    acc.byProject[key].minutes += mins;
+    acc.byProject[key].sessions += 1;
+    if (date) {
+      if (!acc.byDate[date]) acc.byDate[date] = { minutes: 0, sessions: 0 };
+      acc.byDate[date].minutes += mins;
+      acc.byDate[date].sessions += 1;
+      if (!acc.byDateProject[date]) acc.byDateProject[date] = {};
+      if (!acc.byDateProject[date][key]) acc.byDateProject[date][key] = { projectId: e.taskId || null, name, minutes: 0, sessions: 0 };
+      acc.byDateProject[date][key].minutes += mins;
+      acc.byDateProject[date][key].sessions += 1;
+    }
+    if (month) {
+      if (!acc.byMonth[month]) acc.byMonth[month] = { minutes: 0, sessions: 0 };
+      acc.byMonth[month].minutes += mins;
+      acc.byMonth[month].sessions += 1;
+    }
+    return acc;
+  }, createEmptyPomoArchivedTotals());
+}
+function getCombinedPomoStats() {
+  const current = getCurrentPomoStats();
+  const archived = getPomoArchivedTotals();
+  const combined = normalizePomoArchivedTotals(archived);
+  combined.totalMinutes += current.totalMinutes;
+  combined.totalSessions += current.totalSessions;
+  Object.entries(current.byProject).forEach(([key, val]) => {
+    if (!combined.byProject[key]) combined.byProject[key] = { projectId: val.projectId || null, name: val.name, minutes: 0, sessions: 0 };
+    combined.byProject[key].minutes += val.minutes;
+    combined.byProject[key].sessions += val.sessions;
+  });
+  Object.entries(current.byDate).forEach(([date, val]) => {
+    if (!combined.byDate[date]) combined.byDate[date] = { minutes: 0, sessions: 0 };
+    combined.byDate[date].minutes += val.minutes;
+    combined.byDate[date].sessions += val.sessions;
+  });
+  Object.entries(current.byMonth).forEach(([month, val]) => {
+    if (!combined.byMonth[month]) combined.byMonth[month] = { minutes: 0, sessions: 0 };
+    combined.byMonth[month].minutes += val.minutes;
+    combined.byMonth[month].sessions += val.sessions;
+  });
+  Object.entries(current.byDateProject || {}).forEach(([date, projectMap]) => {
+    if (!combined.byDateProject[date]) combined.byDateProject[date] = {};
+    Object.entries(projectMap).forEach(([key, val]) => {
+      if (!combined.byDateProject[date][key]) combined.byDateProject[date][key] = { projectId: val.projectId || null, name: val.name, minutes: 0, sessions: 0 };
+      combined.byDateProject[date][key].minutes += val.minutes;
+      combined.byDateProject[date][key].sessions += val.sessions;
+    });
+  });
+  return combined;
+}
+function getProjectFocusMinutes(projectId, projectName) {
+  const stats = getCombinedPomoStats();
+  return Object.values(stats.byProject || {}).filter(p => String(p.projectId || '') === String(projectId || '') || p.name === projectName)
+    .reduce((sum, p) => sum + (p.minutes || 0), 0);
+}
+function getWeeklyFocusStats(start, end) {
+  const currentSessions = (pomoLog || []).filter(e => {
+    const d = new Date(e.ts);
+    return e.type === 'focus' && d >= start && d <= end;
+  });
+  const byDate = {};
+  const byProject = {};
+  currentSessions.forEach(e => {
+    e = pomoNormalizeSession(e);
+    const date = e.ts.slice(0,10);
+    const key = pomoSessionProjectKey(e);
+    const name = pomoSessionProjectName(e);
+    byDate[date] = byDate[date] || { minutes: 0, sessions: 0 };
+    byDate[date].minutes += e.mins || 0;
+    byDate[date].sessions += 1;
+    if (!byProject[key]) byProject[key] = { projectId: e.taskId || null, name, minutes: 0, sessions: 0 };
+    byProject[key].minutes += e.mins || 0;
+    byProject[key].sessions += 1;
+  });
+  const archived = getPomoArchivedTotals();
+  Object.entries(archived.byDate || {}).forEach(([date, val]) => {
+    const d = parseDate(date);
+    if (d >= start && d <= end) {
+      byDate[date] = byDate[date] || { minutes: 0, sessions: 0 };
+      byDate[date].minutes += val.minutes || 0;
+      byDate[date].sessions += val.sessions || 0;
+    }
+  });
+  Object.entries(archived.byDateProject || {}).forEach(([date, projectMap]) => {
+    const d = parseDate(date);
+    if (d >= start && d <= end) {
+      Object.entries(projectMap).forEach(([key, val]) => {
+        if (!byProject[key]) byProject[key] = { projectId: val.projectId || null, name: val.name, minutes: 0, sessions: 0 };
+        byProject[key].minutes += val.minutes || 0;
+        byProject[key].sessions += val.sessions || 0;
+      });
+    }
+  });
+  const totalMinutes = Object.values(byDate).reduce((s, v) => s + (v.minutes || 0), 0);
+  const totalSessions = Object.values(byDate).reduce((s, v) => s + (v.sessions || 0), 0);
+  return { currentSessions, byDate, byProject, totalMinutes, totalSessions };
+}
+enforcePomoLogLimit();
 let pomoCurNoise = 'off';
 let pomoVolVal = 15;
 let pomoActx = null, pomoNoiseNode = null, pomoGainNode = null;
@@ -2300,6 +2606,9 @@ let pomoSessionEndAt = null;
 let pomoPausedAt = null;
 let pomoPausedAccumMs = 0;
 let pomoCompletedGuard = false;
+let pomoLogFilter = 'all';
+let pomoLogDate = '';
+let pomoLogLimit = 20;
 
 const POMO_CIRC = 2 * Math.PI * 75;
 const POMO_MODE_NAMES = {focus:'Focus', short:'Short Break', long:'Long Break'};
@@ -2474,21 +2783,22 @@ function pomoOnSessionEnd() {
       mins: mins,
       taskId: taskId,
       taskName: taskName,
+      projectId: taskId,
+      projectName: taskName,
       note: note,
       ts: (pomoSessionStartTime || new Date()).toISOString()
     };
     pomoLog.unshift(entry);
-    if (pomoLog.length > 100) pomoLog = pomoLog.slice(0, 100);
-    // Warn user when nearing or at limit
+    enforcePomoLogLimit();
+    // Explain current-log rollover; older focus sessions are summarized in archive totals.
     const hint = document.getElementById('pomo-log-hint');
     if (pomoLog.length >= 100) {
-      showToast('⚠️ Focus log is full — older sessions will be lost. Export your data now!', 5000);
-      if (hint) { hint.textContent = '⚠ Log is full — export now to preserve history'; hint.style.color = 'var(--danger)'; }
+      showToast('Current log is full; older sessions were archived automatically', 5000);
+      if (hint) { hint.textContent = 'Current log is full; older sessions are archived automatically'; hint.style.color = 'var(--danger)'; }
     } else if (pomoLog.length >= 90) {
-      showToast('⚠️ Focus log nearing limit — export to preserve history', 4000);
-      if (hint) { hint.textContent = '⚠ Nearing 100 session limit — consider exporting'; hint.style.color = 'var(--amber)'; }
+      showToast('Current log is nearing 100 sessions; overflow will be archived', 4000);
+      if (hint) { hint.textContent = 'Current log is near the 100 session limit; overflow will be archived'; hint.style.color = 'var(--amber)'; }
     }
-    localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
     pomoSession++;
     pomoUpdateDots(); pomoRenderStats(); pomoRenderLog();
     updatePomoNavBadge();
@@ -2541,21 +2851,20 @@ function pomoDoneEarly() {
   const note = noteEl ? noteEl.value.trim() : '';
   const entry = {
     id: Date.now(), type: 'focus', mins: elapsedMins,
-    taskId, taskName, note,
+    taskId, taskName, projectId: taskId, projectName: taskName, note,
     ts: (pomoSessionStartTime || new Date()).toISOString(),
     manual: false
   };
   pomoLog.unshift(entry);
-  if (pomoLog.length > 100) pomoLog = pomoLog.slice(0, 100);
+  enforcePomoLogLimit();
   const hint2 = document.getElementById('pomo-log-hint');
   if (pomoLog.length >= 100) {
-    showToast('⚠️ Focus log is full — older sessions will be lost. Export your data now!', 5000);
-    if (hint2) { hint2.textContent = '⚠ Log is full — export now to preserve history'; hint2.style.color = 'var(--danger)'; }
+    showToast('Current log is full; older sessions were archived automatically', 5000);
+    if (hint2) { hint2.textContent = 'Current log is full; older sessions are archived automatically'; hint2.style.color = 'var(--danger)'; }
   } else if (pomoLog.length >= 90) {
-    showToast('⚠️ Focus log nearing limit — export to preserve history', 4000);
-    if (hint2) { hint2.textContent = '⚠ Nearing 100 session limit — consider exporting'; hint2.style.color = 'var(--amber)'; }
+    showToast('Current log is nearing 100 sessions; overflow will be archived', 4000);
+    if (hint2) { hint2.textContent = 'Current log is near the 100 session limit; overflow will be archived'; hint2.style.color = 'var(--amber)'; }
   }
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
   pomoSession++;
   pomoUpdateDots(); pomoRenderStats(); pomoRenderLog(); updatePomoNavBadge();
   pomoRemaining = pomoTotal;
@@ -2771,9 +3080,9 @@ function pomoSetVol(v) {
 
 function pomoRenderStats() {
   const today = new Date().toISOString().slice(0,10);
-  const todayLog = pomoLog.filter(e => e.ts.slice(0,10) === today && e.type === 'focus');
-  const sessions = todayLog.length;
-  const totalMins = todayLog.reduce((s, e) => s + (e.mins || 0), 0);
+  const todayStats = getCombinedPomoStats().byDate[today] || { minutes: 0, sessions: 0 };
+  const sessions = todayStats.sessions || 0;
+  const totalMins = todayStats.minutes || 0;
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
   const se = document.getElementById('ps-sessions');
   const he = document.getElementById('ps-hours');
@@ -2781,14 +3090,48 @@ function pomoRenderStats() {
   if (he) he.textContent = h + 'h ' + m + 'm';
 }
 
+function pomoFilteredLog() {
+  let list = [...(pomoLog || [])].sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
+  const today = new Date().toISOString().slice(0,10);
+  if (pomoLogFilter === 'today') list = list.filter(e => e.ts && e.ts.slice(0,10) === today);
+  if (pomoLogFilter === 'week') {
+    const r = wrGetWeekRange ? wrGetWeekRange(0) : null;
+    if (r) list = list.filter(e => { const d = new Date(e.ts); return d >= r.start && d <= r.end; });
+  }
+  if (pomoLogFilter === 'date' && pomoLogDate) list = list.filter(e => e.ts && e.ts.slice(0,10) === pomoLogDate);
+  return list;
+}
+function pomoSetLogFilter(filter) {
+  pomoLogFilter = filter || 'all';
+  pomoLogLimit = 20;
+  const dateInput = document.getElementById('pomo-log-date');
+  if (dateInput) dateInput.style.display = pomoLogFilter === 'date' ? '' : 'none';
+  pomoRenderLog();
+}
+function pomoSetLogDate(value) {
+  pomoLogDate = value || '';
+  pomoLogLimit = 20;
+  pomoRenderLog();
+}
+function pomoShowMoreLog() {
+  pomoLogLimit = 100;
+  pomoRenderLog();
+}
+
 function pomoRenderLog() {
   const el = document.getElementById('pomo-log');
   if (!el) return;
-  if (pomoLog.length === 0) {
+  const filteredLog = pomoFilteredLog();
+  const filterEl = document.getElementById('pomo-log-filter');
+  if (filterEl) filterEl.value = pomoLogFilter;
+  const dateInput = document.getElementById('pomo-log-date');
+  if (dateInput) { dateInput.style.display = pomoLogFilter === 'date' ? '' : 'none'; dateInput.value = pomoLogDate; }
+  if (filteredLog.length === 0) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">⏱</div><div class="empty-text">No sessions yet</div></div>';
     return;
   }
-  el.innerHTML = pomoLog.slice(0, 50).map(e => {
+  const visibleLog = filteredLog.slice(0, pomoLogLimit);
+  el.innerHTML = visibleLog.map(e => {
     const d = new Date(e.ts);
     const time = d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
     const date = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
@@ -2823,14 +3166,14 @@ function pomoRenderLog() {
       <button onclick="pomoEditNote(${e.id})" title="Edit note" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">✎</button>
       <button onclick="pomoDeleteEntry(${e.id})" title="Delete" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(138,90,90,.25);background:rgba(138,90,90,.06);color:var(--rose);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;line-height:1" onmouseover="this.style.background='rgba(138,90,90,.18)'" onmouseout="this.style.background='rgba(138,90,90,.06)'">✕</button>
     </div>`;
-  }).join('');
+  }).join('') + (filteredLog.length > visibleLog.length ? '<button class="btn" onclick="pomoShowMoreLog()" style="align-self:center;margin:8px auto 0;font-size:11px;padding:5px 12px">Show 100 Current Sessions</button>' : '');
 }
 
 async function pomoDeleteEntry(id) {
   const ok = await customConfirm('This session entry will be permanently removed.', 'Delete entry?');
   if (!ok) return;
   pomoLog = pomoLog.filter(e => e.id !== id);
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
+  pomoSaveCurrentLog();
   pomoRenderLog(); pomoRenderStats(); updatePomoNavBadge();
   showToast('Entry removed');
 }
@@ -2852,7 +3195,7 @@ function pomoSaveNote(id) {
   const entry = pomoLog.find(e => e.id === id);
   if (entry) {
     entry.note = note;
-    localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
+    pomoSaveCurrentLog();
   }
   pomoRenderLog();
   showToast('Note saved');
@@ -2938,22 +3281,13 @@ function pomoPopulateTaskSelect() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">Link to project (optional)</option>' +
-    tasks.filter(t => t.status !== 'done').map(t =>
+    activeProjects().filter(t => t.status !== 'done').map(t =>
       `<option value="${t.id}"${String(t.id) === cur ? ' selected' : ''}>${t.name}</option>`
     ).join('');
 }
 
 async function pomoClearLog() {
-  const confirmed = await customConfirm('This will permanently delete all focus sessions. Export first if you want to keep the data.', 'Clear all sessions?', 'Clear All', 'Cancel', 'border-color:var(--rose);color:var(--rose);background:rgba(192,57,43,.07)');
-  if (!confirmed) return;
-  pomoLog = [];
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
-  pomoRenderStats();
-  pomoRenderLog();
-  updatePomoNavBadge();
-  const hint = document.getElementById('pomo-log-hint');
-  if (hint) { hint.textContent = 'Focus log supports up to 100 sessions'; hint.style.color = 'var(--muted2)'; }
-  showToast('✅ Session log cleared');
+  return pomoArchiveCurrentLog();
 }
 
 
@@ -3031,7 +3365,9 @@ function pomoExportConfirm() {
 }
 
 function pomoExportLog(fromDate, toDate) {
-  if (pomoLog.length === 0) { showToast('No sessions to export'); return; }
+  const combinedStats = getCombinedPomoStats();
+  const archivedStats = getPomoArchivedTotals();
+  if (pomoLog.length === 0 && combinedStats.totalMinutes === 0) { showToast('No sessions to export'); return; }
   let filtered = [...pomoLog];
   if (fromDate) filtered = filtered.filter(e => e.ts.slice(0,10) >= fromDate);
   if (toDate) filtered = filtered.filter(e => e.ts.slice(0,10) <= toDate);
@@ -3111,8 +3447,23 @@ const sheet2Data = [['Project', 'Total (min)', 'Hours', 'Distribution']];
   if (ws2[totalECell]) ws2[totalECell].s = {font:{italic:true,bold:true,color:{rgb:'2D6A4F'}},fill:{fgColor:{rgb:'E8F4EC'}},alignment:{horizontal:'center'}};
   ws2['!freeze'] = {xSplit:'0', ySplit:'1', topLeftCell:'A2', activePane:'bottomLeft', state:'frozen'};
 
+  const archivedProjectRows = Object.values(archivedStats.byProject || {}).sort((a,b) => (b.minutes||0) - (a.minutes||0));
+  const archivedData = [['Project', 'Archived Sessions', 'Archived Minutes', 'Hours']];
+  archivedProjectRows.forEach(p => archivedData.push([p.name || 'Others', p.sessions || 0, p.minutes || 0, Math.round((p.minutes || 0) / 60 * 10) / 10]));
+  archivedData.push(['TOTAL', archivedStats.totalSessions || 0, archivedStats.totalMinutes || 0, Math.round((archivedStats.totalMinutes || 0) / 60 * 10) / 10]);
+  const wsArchived = XLSX.utils.aoa_to_sheet(archivedData);
+  wsArchived['!cols'] = [{wch:28},{wch:18},{wch:18},{wch:10}];
+  ['A1','B1','C1','D1'].forEach(c => { if (wsArchived[c]) wsArchived[c].s = s2HeaderStyle; });
+
+  const combinedData = [['Metric', 'Sessions', 'Minutes', 'Hours'], ['Current Sessions', sortedLog.filter(e => e.type === 'focus').length, totalMins, Math.round(totalMins / 60 * 10) / 10], ['Archived Totals', archivedStats.totalSessions || 0, archivedStats.totalMinutes || 0, Math.round((archivedStats.totalMinutes || 0) / 60 * 10) / 10], ['Combined Total', combinedStats.totalSessions || 0, combinedStats.totalMinutes || 0, Math.round((combinedStats.totalMinutes || 0) / 60 * 10) / 10]];
+  const wsCombined = XLSX.utils.aoa_to_sheet(combinedData);
+  wsCombined['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:10}];
+  ['A1','B1','C1','D1'].forEach(c => { if (wsCombined[c]) wsCombined[c].s = s2HeaderStyle; });
+
   XLSX.utils.book_append_sheet(wb, ws1, 'Session Log');
   XLSX.utils.book_append_sheet(wb, ws2, 'By Project');
+  XLSX.utils.book_append_sheet(wb, wsArchived, 'Archived Totals');
+  XLSX.utils.book_append_sheet(wb, wsCombined, 'Combined Summary');
   const firstName = (localStorage.getItem('taas_username') || 'focus').split(' ')[0];
   const fmtFilDate = d => { const dt = new Date(d); return String(dt.getDate()).padStart(2,'0') + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()] + dt.getFullYear(); };
   const fileFrom = fmtFilDate(fromDate || (sortedLog.length > 0 ? sortedLog[0].ts : new Date()));
@@ -3123,16 +3474,7 @@ const sheet2Data = [['Project', 'Total (min)', 'Hours', 'Distribution']];
 
 
 async function pomoClearLog() {
-  const confirmed = await customConfirm('This will permanently delete all focus sessions. Export first if you want to keep the data.', 'Clear all sessions?', 'Clear All', 'Cancel', 'border-color:var(--rose);color:var(--rose);background:rgba(192,57,43,.07)');
-  if (!confirmed) return;
-  pomoLog = [];
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
-  pomoRenderStats();
-  pomoRenderLog();
-  updatePomoNavBadge();
-  const hint = document.getElementById('pomo-log-hint');
-  if (hint) { hint.textContent = 'Focus log supports up to 100 sessions'; hint.style.color = 'var(--muted2)'; }
-  showToast('✅ Session log cleared');
+  return pomoArchiveCurrentLog();
 }
 
 
@@ -3212,16 +3554,7 @@ function pomoExportConfirm() {
 
 
 async function pomoClearLog() {
-  const confirmed = await customConfirm('This will permanently delete all focus sessions. Export first if you want to keep the data.', 'Clear all sessions?', 'Clear All', 'Cancel', 'border-color:var(--rose);color:var(--rose);background:rgba(192,57,43,.07)');
-  if (!confirmed) return;
-  pomoLog = [];
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
-  pomoRenderStats();
-  pomoRenderLog();
-  updatePomoNavBadge();
-  const hint = document.getElementById('pomo-log-hint');
-  if (hint) { hint.textContent = 'Focus log supports up to 100 sessions'; hint.style.color = 'var(--muted2)'; }
-  showToast('✅ Session log cleared');
+  return pomoArchiveCurrentLog();
 }
 
 
@@ -3300,19 +3633,38 @@ function pomoExportConfirm() {
 
 
 
-async function pomoClearLog() {
-  const ok = await customConfirm('All session history will be permanently removed.', 'Clear log?');
+async function pomoArchiveCurrentLog() {
+  if (!pomoLog.length) { showToast('No current sessions to archive'); return; }
+  const ok = await customConfirm('This will archive current session details and clear the visible log list. Your total focus time and project time will be preserved.', 'Archive current log?', 'Archive', 'Cancel', 'border-color:var(--border2);color:var(--muted);background:var(--surface2)');
   if (!ok) return;
+  pomoArchiveSessions(pomoLog);
   pomoLog = [];
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
+  pomoSaveCurrentLog();
   pomoRenderLog(); pomoRenderStats(); updatePomoNavBadge();
-  showToast('Session log cleared');
+  showToast('Current log archived');
+}
+
+async function pomoResetAllFocusData() {
+  const ok = await customConfirm('This permanently deletes all focus sessions, total focus time, project focus time, and weekly focus statistics. This cannot be undone.', 'Reset all focus data?', 'Continue', 'Cancel');
+  if (!ok) return;
+  const typed = window.prompt('Type RESET to permanently delete all focus data.');
+  if (typed !== 'RESET') { showToast('Reset cancelled'); return; }
+  pomoLog = [];
+  pomoArchivedTotals = createEmptyPomoArchivedTotals();
+  pomoSaveCurrentLog();
+  savePomoArchivedTotals();
+  pomoRenderLog(); pomoRenderStats(); updatePomoNavBadge(); wrRender();
+  showToast('Focus data reset');
+}
+
+async function pomoClearLog() {
+  return pomoArchiveCurrentLog();
 }
 
 function updatePomoNavBadge() {
   const today = new Date().toISOString().slice(0,10);
-  const todayLog = pomoLog.filter(e => e.ts.slice(0,10) === today && e.type === 'focus');
-  const totalMins = todayLog.reduce((s, e) => s + (e.mins || 0), 0);
+  const todayStats = getCombinedPomoStats().byDate[today] || { minutes: 0 };
+  const totalMins = todayStats.minutes || 0;
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
   const badge = document.getElementById('nb-pomodoro');
   if (badge) badge.textContent = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
@@ -3349,7 +3701,7 @@ function openManualEntry() {
   const sel = document.getElementById('me-task');
   const cur = sel.value;
   sel.innerHTML = '<option value="">— None (logged as Others) —</option>' +
-    tasks.map(t => `<option value="${t.id}"${String(t.id)===cur?' selected':''}>${t.name}</option>`).join('');
+    activeProjects().map(t => `<option value="${t.id}"${String(t.id)===cur?' selected':''}>${t.name}</option>`).join('');
   sel.onchange = meRenderNoteChips;
   meRenderNoteChips();
   document.getElementById('manual-entry-modal').classList.add('open');
@@ -3440,13 +3792,14 @@ function saveManualEntry() {
     mins: minsRaw,
     taskId: taskId,
     taskName: taskName,
+    projectId: taskId,
+    projectName: taskName,
     note: note || '',
     manual: true,
     ts: new Date(tsStr).toISOString()
   };
   pomoLog.unshift(entry);
-  if (pomoLog.length > 200) pomoLog = pomoLog.slice(0, 200);
-  localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog));
+  enforcePomoLogLimit();
   pomoRenderLog(); pomoRenderStats(); updatePomoNavBadge();
   closeManualEntry();
   showToast('✅ Hours logged');
@@ -3458,6 +3811,7 @@ function exportData() {
   const data = {
     tasks: tasks,
     pomoLog: pomoLog,
+    pomoArchivedTotals: getPomoArchivedTotals(),
     dailyItems: dailyItems,
     backlogItems: backlogItems,
     blockers: blockers,
@@ -3490,8 +3844,9 @@ function importData(input) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.tasks) { tasks = data.tasks; localStorage.setItem(TASKS_KEY, JSON.stringify(tasks)); }
-      if (data.pomoLog) { pomoLog = data.pomoLog; localStorage.setItem(POMO_LOG_KEY, JSON.stringify(pomoLog)); }
+      if (data.pomoArchivedTotals) { pomoArchivedTotals = normalizePomoArchivedTotals(data.pomoArchivedTotals); savePomoArchivedTotals(); }
+      if (data.tasks) { tasks = data.tasks; normalizeProjectArchiveFields(); localStorage.setItem(TASKS_KEY, JSON.stringify(tasks)); }
+      if (data.pomoLog) { pomoLog = data.pomoLog.map(pomoNormalizeSession); enforcePomoLogLimit(); }
       if (data.dailyItems) { dailyItems = data.dailyItems; localStorage.setItem(DAILY_KEY, JSON.stringify(dailyItems)); }
       if (data.backlogItems) { backlogItems = data.backlogItems; localStorage.setItem(BACKLOG_KEY, JSON.stringify(backlogItems)); }
       if (data.blockers) { blockers = data.blockers; localStorage.setItem(BLOCKER_KEY, JSON.stringify(blockers)); }
@@ -4079,7 +4434,6 @@ function aiGetTaskContext() {
 }
 
 function aiGetWeeklyLogContext(from, to, rangeLabel) {
-  if (!pomoLog || pomoLog.length === 0) return 'No Pomodoro sessions recorded.';
   if (!from || !to) {
     const now = new Date();
     const day = now.getDay();
@@ -4087,17 +4441,14 @@ function aiGetWeeklyLogContext(from, to, rangeLabel) {
     to = new Date(from); to.setDate(from.getDate() + 6); to.setHours(23,59,59,999);
     rangeLabel = 'this week';
   }
-  const sessions = pomoLog.filter(e => {
-    const d = new Date(e.ts);
-    return d >= from && d <= to && e.type === 'focus';
-  });
-  if (sessions.length === 0) return `No focus sessions recorded for ${rangeLabel}.`;
-  const totalMins = sessions.reduce((s, e) => s + (e.mins || 0), 0);
+  const stats = getWeeklyFocusStats(from, to);
+  if (stats.totalMinutes === 0) return `No focus sessions recorded for ${rangeLabel}.`;
+  const totalMins = stats.totalMinutes;
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
   const breakdown = {};
-  sessions.forEach(e => { const k = e.taskName || 'Others'; breakdown[k] = (breakdown[k] || 0) + (e.mins || 0); });
+  Object.values(stats.byProject || {}).forEach(p => { const k = p.name || 'Others'; breakdown[k] = (breakdown[k] || 0) + (p.minutes || 0); });
   const lines = Object.entries(breakdown).sort((a,b) => b[1]-a[1]).map(([k,v]) => `  - ${k}: ${Math.floor(v/60)}h ${v%60}m`).join('\n');
-  return `Pomodoro focus for ${rangeLabel}: ${h}h ${m}m total across ${sessions.length} sessions\n${lines}`;
+  return `Pomodoro focus for ${rangeLabel}: ${h}h ${m}m total across ${stats.totalSessions} sessions\n${lines}`;
 }
 
 async function aiQuickAction(type) {
@@ -4830,7 +5181,6 @@ function dtagStyle(taskId) {
 // ── Daily List ──────────────────────────────────────────────────
 let _dailySideTab = 'backlog';
 const DAILY_KEY = 'jhtt_daily', BACKLOG_KEY = 'jhtt_backlog';
-const DAILY_PROJECT_FILTER_KEY = 'jhtt_daily_project_filter';
 let dailyItems = JSON.parse(localStorage.getItem(DAILY_KEY) || '[]') || [];
 // Purge only DONE items older than today; keep all undone (overdue) items
 (function() {
@@ -4841,7 +5191,6 @@ let dailyItems = JSON.parse(localStorage.getItem(DAILY_KEY) || '[]') || [];
   if (dailyItems.length !== before) localStorage.setItem(DAILY_KEY, JSON.stringify(dailyItems));
 })();
 let backlogItems = JSON.parse(localStorage.getItem(BACKLOG_KEY) || '[]');
-let dailyProjectFilter = localStorage.getItem(DAILY_PROJECT_FILTER_KEY) || 'all';
 
 function dailyLocalDate(offset = 0) {
   const d = new Date();
@@ -4867,7 +5216,7 @@ function dailyDefaultTaskIdForAdd() {
 }
 
 function dailyTaskOptions(maxLen=30, selectedId=null) {
-  return tasks.filter(t => t.status !== 'done').map(t => {
+  return activeProjects().filter(t => t.status !== 'done').map(t => {
     const selected = selectedId && String(t.id) === String(selectedId) ? ' selected' : '';
     return `<option value="${t.id}"${selected}>${t.name.length > maxLen ? t.name.slice(0,maxLen)+'...' : t.name}</option>`;
   }).join('');
@@ -4882,11 +5231,11 @@ function dailySetProjectFilter(value) {
 function dailyRenderProjectFilter() {
   const wrap = document.getElementById('daily-project-filter');
   if (!wrap) return;
-  if (dailyProjectFilter !== 'all' && dailyProjectFilter !== 'none' && !tasks.some(t => String(t.id) === String(dailyProjectFilter))) {
+  if (dailyProjectFilter !== 'all' && dailyProjectFilter !== 'none' && !activeProjects().some(t => String(t.id) === String(dailyProjectFilter))) {
     dailyProjectFilter = 'all';
     localStorage.setItem(DAILY_PROJECT_FILTER_KEY, dailyProjectFilter);
   }
-  const opts = tasks.map(t => `<option value="${t.id}"${String(t.id) === String(dailyProjectFilter) ? ' selected' : ''}>${t.name.length > 36 ? t.name.slice(0,36)+'...' : t.name}</option>`).join('');
+  const opts = activeProjects().map(t => `<option value="${t.id}"${String(t.id) === String(dailyProjectFilter) ? ' selected' : ''}>${t.name.length > 36 ? t.name.slice(0,36)+'...' : t.name}</option>`).join('');
   wrap.innerHTML = `
     <span class="daily-project-filter-label">Project</span>
     <select class="daily-project-filter-select" id="daily-project-filter-select" onchange="dailySetProjectFilter(this.value)" title="Filter Daily List, Backlog and Blockers by project">
@@ -5065,7 +5414,7 @@ function dailyBacklogLinkTask(id) {
   document.querySelectorAll('.backlog-link-picker').forEach(el => el.remove());
   const tag = document.querySelector('[data-blp="' + id + '"]');
   if (!tag) return;
-  const taskOptions = tasks.filter(t => t.status !== 'done')
+  const taskOptions = activeProjects().filter(t => t.status !== 'done')
     .map(t => '<option value="' + t.id + '"' + (item.taskId === t.id ? ' selected' : '') + '>' + (t.name.length > 32 ? t.name.slice(0,32)+'…' : t.name) + '</option>').join('');
   const picker = document.createElement('div');
   picker.className = 'backlog-link-picker';
@@ -5360,7 +5709,8 @@ function dailyRender() {
   const todayItems = dailyItems.filter(i => i.date === today && !i.done).filter(dailyMatchesProjectFilter);
   const doneItems = dailyItems.filter(i => i.date === today && i.done).filter(dailyMatchesProjectFilter);
 
-  const pomoMinsToday = pomoLog ? pomoLog.filter(p => p.type === 'focus' && p.ts && p.ts.slice(0,10) === today).reduce((s,p) => s + (p.mins||0), 0) : 0;
+  const todayPomoStats = getCombinedPomoStats().byDate[today] || { minutes: 0 };
+  const pomoMinsToday = todayPomoStats.minutes || 0;
   const _fh = Math.floor(pomoMinsToday / 60), _fm = pomoMinsToday % 60;
   const focusHours = _fh + 'h ' + String(_fm).padStart(2,'0') + 'm';
 
@@ -5694,7 +6044,7 @@ function blockerLinkTask(id) {
   document.querySelectorAll('.blocker-link-picker').forEach(el => el.remove());
   const btn = document.querySelector('[data-blkr="' + id + '"]');
   if (!btn) return;
-  const taskOptions = tasks.filter(t => t.status !== 'done')
+  const taskOptions = activeProjects().filter(t => t.status !== 'done')
     .map(t => `<option value="${t.id}"${b.taskId === t.id ? ' selected' : ''}>${t.name.length > 32 ? t.name.slice(0,32)+'…' : t.name}</option>`).join('');
   const picker = document.createElement('div');
   picker.className = 'backlog-link-picker blocker-link-picker';
@@ -6158,8 +6508,8 @@ function mtgToggleFullscreen() {
 (function() {
   const hint = document.getElementById('pomo-log-hint');
   if (!hint) return;
-  if (pomoLog.length >= 100) { hint.textContent = '⚠ Log is full — export now to preserve history'; hint.style.color = 'var(--danger)'; }
-  else if (pomoLog.length >= 90) { hint.textContent = '⚠ Nearing 100 session limit — consider exporting'; hint.style.color = 'var(--amber)'; }
+  if (pomoLog.length >= 100) { hint.textContent = 'Current log is full; older sessions are archived automatically'; hint.style.color = 'var(--danger)'; }
+  else if (pomoLog.length >= 90) { hint.textContent = 'Current log is near the 100 session limit; overflow will be archived'; hint.style.color = 'var(--amber)'; }
 })();
 
 // ── Theme switcher ──────────────────────────────────────────────────────
