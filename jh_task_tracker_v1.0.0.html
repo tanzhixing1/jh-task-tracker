@@ -286,6 +286,12 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
 .daily-nav-btn{background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Lato',sans-serif;transition:all .15s}
 .daily-nav-btn:hover{border-color:var(--sage);color:var(--sage2)}
 .daily-date-label{font-size:13px;font-weight:700;color:var(--text2);min-width:160px;text-align:center}
+.daily-project-filter{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.daily-project-filter-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.daily-project-filter-select{font-size:12px;border:1px solid var(--border);border-radius:9px;padding:7px 28px 7px 10px;background:var(--surface);color:var(--text2);font-family:'Lato',sans-serif;outline:none;max-width:260px}
+.daily-project-filter-select:focus{border-color:var(--sage)}
+.daily-project-filter-clear{font-size:11px;border:none;background:none;color:var(--muted2);cursor:pointer;font-family:'Lato',sans-serif;padding:4px 0}
+.daily-project-filter-clear:hover{color:var(--sage2)}
 .backlog-add-row{display:flex;flex-direction:row;gap:6px;margin-top:14px;align-items:stretch}
 .backlog-add-row-inputs{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .backlog-add-row-bottom{display:flex;gap:6px}
@@ -680,6 +686,7 @@ body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;font-w
           <div class="daily-date-label" id="daily-date-label"></div>
           <div id="daily-progress-pill" style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace"></div>
         </div>
+        <div class="daily-project-filter" id="daily-project-filter"></div>
 
       </div>
       <div class="daily-layout">
@@ -4823,6 +4830,7 @@ function dtagStyle(taskId) {
 // ── Daily List ──────────────────────────────────────────────────
 let _dailySideTab = 'backlog';
 const DAILY_KEY = 'jhtt_daily', BACKLOG_KEY = 'jhtt_backlog';
+const DAILY_PROJECT_FILTER_KEY = 'jhtt_daily_project_filter';
 let dailyItems = JSON.parse(localStorage.getItem(DAILY_KEY) || '[]') || [];
 // Purge only DONE items older than today; keep all undone (overdue) items
 (function() {
@@ -4833,6 +4841,7 @@ let dailyItems = JSON.parse(localStorage.getItem(DAILY_KEY) || '[]') || [];
   if (dailyItems.length !== before) localStorage.setItem(DAILY_KEY, JSON.stringify(dailyItems));
 })();
 let backlogItems = JSON.parse(localStorage.getItem(BACKLOG_KEY) || '[]');
+let dailyProjectFilter = localStorage.getItem(DAILY_PROJECT_FILTER_KEY) || 'all';
 
 function dailyLocalDate(offset = 0) {
   const d = new Date();
@@ -4845,6 +4854,48 @@ if (!dailyItems) { dailyItems = []; }
 function dailySave() {
   localStorage.setItem(DAILY_KEY, JSON.stringify(dailyItems));
   localStorage.setItem(BACKLOG_KEY, JSON.stringify(backlogItems));
+}
+
+function dailyMatchesProjectFilter(item) {
+  if (dailyProjectFilter === 'all') return true;
+  if (dailyProjectFilter === 'none') return !item.taskId;
+  return String(item.taskId || '') === String(dailyProjectFilter);
+}
+
+function dailyDefaultTaskIdForAdd() {
+  return dailyProjectFilter !== 'all' && dailyProjectFilter !== 'none' ? parseInt(dailyProjectFilter) : null;
+}
+
+function dailyTaskOptions(maxLen=30, selectedId=null) {
+  return tasks.filter(t => t.status !== 'done').map(t => {
+    const selected = selectedId && String(t.id) === String(selectedId) ? ' selected' : '';
+    return `<option value="${t.id}"${selected}>${t.name.length > maxLen ? t.name.slice(0,maxLen)+'...' : t.name}</option>`;
+  }).join('');
+}
+
+function dailySetProjectFilter(value) {
+  dailyProjectFilter = value || 'all';
+  localStorage.setItem(DAILY_PROJECT_FILTER_KEY, dailyProjectFilter);
+  dailyRender();
+}
+
+function dailyRenderProjectFilter() {
+  const wrap = document.getElementById('daily-project-filter');
+  if (!wrap) return;
+  if (dailyProjectFilter !== 'all' && dailyProjectFilter !== 'none' && !tasks.some(t => String(t.id) === String(dailyProjectFilter))) {
+    dailyProjectFilter = 'all';
+    localStorage.setItem(DAILY_PROJECT_FILTER_KEY, dailyProjectFilter);
+  }
+  const opts = tasks.map(t => `<option value="${t.id}"${String(t.id) === String(dailyProjectFilter) ? ' selected' : ''}>${t.name.length > 36 ? t.name.slice(0,36)+'...' : t.name}</option>`).join('');
+  wrap.innerHTML = `
+    <span class="daily-project-filter-label">Project</span>
+    <select class="daily-project-filter-select" id="daily-project-filter-select" onchange="dailySetProjectFilter(this.value)" title="Filter Daily List, Backlog and Blockers by project">
+      <option value="all"${dailyProjectFilter === 'all' ? ' selected' : ''}>All projects</option>
+      <option value="none"${dailyProjectFilter === 'none' ? ' selected' : ''}>Others / unlinked</option>
+      ${opts ? '<option disabled>────────────</option>' + opts : ''}
+    </select>
+    ${dailyProjectFilter !== 'all' ? "<button class=\"daily-project-filter-clear\" onclick=\"dailySetProjectFilter('all')\" title=\"Clear project filter\">Clear</button>" : ''}
+  `;
 }
 
 function backlogAutoSchedule() {
@@ -5301,11 +5352,13 @@ function dailyRender() {
     const d = new Date();
     lbl.textContent = d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
+  dailyRenderProjectFilter();
 
   // Rollovers: yesterday's undone items
-  const rollovers = dailyItems.filter(i => i.date < today && !i.done);
+  const rollovers = dailyItems.filter(i => i.date < today && !i.done).filter(dailyMatchesProjectFilter);
   // Today's undone items only
-  const todayItems = dailyItems.filter(i => i.date === today && !i.done);
+  const todayItems = dailyItems.filter(i => i.date === today && !i.done).filter(dailyMatchesProjectFilter);
+  const doneItems = dailyItems.filter(i => i.date === today && i.done).filter(dailyMatchesProjectFilter);
 
   const pomoMinsToday = pomoLog ? pomoLog.filter(p => p.type === 'focus' && p.ts && p.ts.slice(0,10) === today).reduce((s,p) => s + (p.mins||0), 0) : 0;
   const _fh = Math.floor(pomoMinsToday / 60), _fm = pomoMinsToday % 60;
@@ -5349,14 +5402,14 @@ function dailyRender() {
       html += `<div style="font-size:11px;color:var(--muted2);margin-bottom:6px;padding-left:2px">Drag items to TODAY ↓ to reschedule</div>`;
       html += `<div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;padding-right:4px" class="scroll-hide">${rollovers.map(i => renderItem(i, true)).join('')}</div>`;
     }
-    const doneItems = dailyItems.filter(i => i.date === today && i.done);
     html += `<div class="daily-group-header" ondragover="event.preventDefault();if(typeof _blockerDragId!=='undefined'&&_blockerDragId)event.dataTransfer.dropEffect='none'" ondrop="if(typeof _blockerDragId==='undefined'||!_blockerDragId)dailyDropToToday(event);else event.preventDefault()"><span class="daily-group-label">TODAY · ${todayItems.length}</span><div class="daily-group-line"></div></div>`;
     if (todayItems.length === 0) {
-      html += `<div style="text-align:center;padding:80px 0 28px;color:var(--muted2);font-size:13px" ondragover="event.preventDefault();if(typeof _blockerDragId!=='undefined'&&_blockerDragId)event.dataTransfer.dropEffect='none'" ondrop="if(typeof _blockerDragId==='undefined'||!_blockerDragId)dailyDropToToday(event);else event.preventDefault()"><div style="margin-bottom:6px;opacity:.4;color:var(--accent)"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"36\" height=\"36\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\"/><path d=\"M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7\"/></svg></div><div>Nothing planned yet — add something below</div></div>`;
+      const emptyText = dailyProjectFilter === 'all' ? 'Nothing planned yet — add something below' : 'Nothing planned for this project today';
+      html += `<div style="text-align:center;padding:80px 0 28px;color:var(--muted2);font-size:13px" ondragover="event.preventDefault();if(typeof _blockerDragId!=='undefined'&&_blockerDragId)event.dataTransfer.dropEffect='none'" ondrop="if(typeof _blockerDragId==='undefined'||!_blockerDragId)dailyDropToToday(event);else event.preventDefault()"><div style="margin-bottom:6px;opacity:.4;color:var(--accent)"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"36\" height=\"36\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\"/><path d=\"M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7\"/></svg></div><div>${emptyText}</div></div>`;
     } else {
       html += `<div style="display:flex;flex-direction:column;gap:6px;max-height:500px;overflow-y:auto;padding-right:4px" class="scroll-hide">${todayItems.map(i => renderItem(i, false)).join('')}</div>`;
     }
-    const taskOptions = tasks.filter(t => t.status !== 'done').map(t => `<option value="${t.id}">${t.name.length > 35 ? t.name.slice(0,35)+'…' : t.name}</option>`).join('');
+    const taskOptions = dailyTaskOptions(35, dailyDefaultTaskIdForAdd());
     html += `<div style="flex:1"></div>`;
     if (doneItems.length > 0) {
       const doneOpen = localStorage.getItem('daily_done_open') === '1';
@@ -5377,9 +5430,9 @@ function dailyRender() {
     main.innerHTML = html;
   }
 
-  const doneCount = dailyItems.filter(i => i.date === today && i.done).length;
+  const doneCount = doneItems.length;
   const totalCount = doneCount + todayItems.length + rollovers.length;
-  const taskOptsForAdd = tasks.filter(t => t.status !== 'done').map(t => `<option value="${t.id}">${t.name.length > 30 ? t.name.slice(0,30)+'…' : t.name}</option>`).join('');
+  const taskOptsForAdd = dailyTaskOptions(30, dailyDefaultTaskIdForAdd());
 
   const pill = document.getElementById('daily-progress-pill');
   if (pill) {
@@ -5390,9 +5443,10 @@ function dailyRender() {
 
   const backlogPanel = document.getElementById('daily-panel-backlog');
   if (backlogPanel) {
-    const backlogHtml = backlogItems.length === 0
-      ? `<div class="empty empty-sm"><div class="empty-icon">📋</div><div class="empty-text">Backlog is empty</div></div>`
-      : backlogItems.map(i => {
+    const visibleBacklogItems = backlogItems.filter(dailyMatchesProjectFilter);
+    const backlogHtml = visibleBacklogItems.length === 0
+      ? `<div class="empty empty-sm"><div class="empty-icon">📋</div><div class="empty-text">${dailyProjectFilter === 'all' ? 'Backlog is empty' : 'No backlog for this project'}</div></div>`
+      : visibleBacklogItems.map(i => {
           const tagLabel = i.taskName || '+ link project';
           const tagClass = i.taskName ? 'backlog-task-tag linked' : 'backlog-task-tag unlinked';
           const tagStyle = i.taskName && i.taskId ? dtagStyle(i.taskId) : '';
@@ -5432,7 +5486,7 @@ function dailyRender() {
   }
 
   const backlogBadge = document.getElementById('backlog-tab-badge');
-  if (backlogBadge) backlogBadge.textContent = backlogItems.length;
+  if (backlogBadge) backlogBadge.textContent = backlogItems.filter(dailyMatchesProjectFilter).length;
 
   blockerRender(taskOptsForAdd);
   const _pb = document.getElementById('daily-panel-backlog');
@@ -5460,14 +5514,15 @@ function blockerSave() {
 function blockerRender(taskOptsForAdd) {
   const panel = document.getElementById('daily-panel-blockers');
   if (!panel) return;
-  const taskOpts = taskOptsForAdd || tasks.filter(t => t.status !== 'done').map(t => `<option value="${t.id}">${t.name.length > 30 ? t.name.slice(0,30)+'…' : t.name}</option>`).join('');
-  const activeCount = blockers.filter(b => !b.resolved).length;
+  const taskOpts = taskOptsForAdd || dailyTaskOptions(30, dailyDefaultTaskIdForAdd());
+  const visibleBlockers = blockers.filter(dailyMatchesProjectFilter);
+  const activeCount = visibleBlockers.filter(b => !b.resolved).length;
   const badge = document.getElementById('blocker-tab-badge');
   if (badge) badge.textContent = activeCount;
 
-  const listHtml = blockers.length === 0
-    ? `<div class="empty empty-sm"><div class="empty-icon">🚀</div><div class="empty-text">No blockers</div></div>`
-    : blockers.map(b => {
+  const listHtml = visibleBlockers.length === 0
+    ? `<div class="empty empty-sm"><div class="empty-icon">🚀</div><div class="empty-text">${dailyProjectFilter === 'all' ? 'No blockers' : 'No blockers for this project'}</div></div>`
+    : visibleBlockers.map(b => {
         const resolvedClass = b.resolved ? ' resolved' : '';
         const textClass = b.resolved ? ' resolved' : '';
         const ownerPill = b.owner
